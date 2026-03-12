@@ -37,13 +37,23 @@ def main():
     # selected is list of (label, index) tuples
     selected_companies = [options[idx][1] for _, idx in selected]
 
+    # Prompt for project_id for each company
+    project_ids = {}
+    print()
+    for company in selected_companies:
+        project_id = input(f"Enter project ID for {company}: ").strip()
+        if not project_id:
+            print(f"Error: project ID is required for {company}")
+            sys.exit(1)
+        project_ids[company] = project_id
+
     print(f"\nExporting {len(selected_companies)} companies...")
-    results = langfuse_exporter.export(selected_companies, company_groups)
+    results = langfuse_exporter.export(selected_companies, company_groups, project_ids)
 
     print("\nExport complete!")
     print(f"Output directory: {langfuse_exporter.OUTPUT_DIR}\n")
     for entry in results:
-        print(f"  {entry['company']}: {entry['num_questions']} Q&A pairs → {entry['file']}")
+        print(f"  {entry['company']} [Evaluation]: {entry['num_questions']} Q&A pairs → {entry['file']}")
         print(f"    Documents: {', '.join(entry['documents'])}")
     print(f"\nManifest written to: {langfuse_exporter.OUTPUT_DIR / 'manifest.json'}")
 
