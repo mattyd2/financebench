@@ -28,12 +28,47 @@ def save_project_id_cache(cache):
 
 def build_options(company_groups):
     """Build display options for the pick multi-select menu."""
-    options = []
+    # Collect all question types across all companies
+    all_types = sorted({
+        qa.get("question_type", "unknown")
+        for group in company_groups.values()
+        for qa in group["qa_pairs"]
+    })
+
+    # First pass: collect all row data
+    rows = []
     for company, group in company_groups.items():
         doc_types = ", ".join(sorted({d["doc_type"] for d in group["documents"]}))
         page_counts = [d["page_count"] for d in group["documents"] if d["page_count"] is not None]
         total_pages = sum(page_counts)
-        label = f"{company} — {len(group['documents'])} docs, {total_pages} pages, {group['num_questions']} Q&A pairs ({doc_types})"
+
+        type_counts = {t: 0 for t in all_types}
+        for qa in group["qa_pairs"]:
+            t = qa.get("question_type", "unknown")
+            type_counts[t] = type_counts.get(t, 0) + 1
+        type_summary = ", ".join(f"{t}: {'🌵' if c == 0 else c}" for t, c in sorted(type_counts.items()))
+
+        rows.append((company, len(group["documents"]), total_pages, group["num_questions"], type_summary, doc_types))
+
+    rows.sort(key=lambda r: r[2])
+
+    # Compute column widths
+    w_company  = max(len(r[0]) for r in rows)
+    w_docs     = max(len(str(r[1])) for r in rows)
+    w_pages    = max(len(str(r[2])) for r in rows)
+    w_qa       = max(len(str(r[3])) for r in rows)
+    w_types    = max(len(r[4]) for r in rows)
+
+    options = []
+    for company, n_docs, total_pages, n_qa, type_summary, doc_types in rows:
+        label = (
+            f"{company:<{w_company}}  "
+            f"{n_docs:>{w_docs}} docs  "
+            f"{total_pages:>{w_pages}} pages  "
+            f"{n_qa:>{w_qa}} Q&A  "
+            f"[{type_summary:<{w_types}}]  "
+            f"({doc_types})"
+        )
         options.append((label, company))
     return options
 
